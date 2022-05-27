@@ -1,0 +1,75 @@
+/* Query 1 - query used for fisrt insight */
+SELECT ar.Name AS artist_name,
+       sum(il.UnitPrice * il.Quantity) AS Amount_Spent
+FROM Artist ar
+JOIN Album al ON ar.ArtistId = al.ArtistId
+JOIN Track t ON al.AlbumId = t.AlbumId
+JOIN InvoiceLine il ON t.TrackId = il.TrackId
+GROUP BY 1
+ORDER BY 2 DESC
+LIMIT 20;
+
+/* Query 2 - query used for second insight */
+WITH T1 AS
+  (SELECT count(*) AS purchases,
+          c.Country AS country_name,
+          g.Name AS genre_name,
+          g.GenreId AS genre_id
+   FROM Genre g
+   JOIN Track t ON g.GenreId = t.GenreId
+   JOIN InvoiceLine il ON t.TrackId = il.TrackId
+   JOIN Invoice i ON il.InvoiceId = i.InvoiceId
+   JOIN Customer c ON i.CustomerId = c.CustomerId
+   GROUP BY 2,
+            3
+   ORDER BY 2,
+            1 DESC),
+     T2 AS
+  (SELECT max(purchases) AS max_purchases,
+          country_name,
+          genre_name,
+          genre_id
+   FROM T1
+   GROUP BY 2)
+SELECT T1.*
+FROM T1
+JOIN T2 ON T1.country_name = T2.country_name
+AND T1.purchases = T2.max_purchases
+ORDER BY 2,
+         3;
+
+
+/* Query 3 - query used for third insight */
+WITH t1 AS
+  (SELECT t.Name AS track_name,
+          g.Name AS genre_name,
+          a.AlbumId AS album_id,
+          CASE
+              WHEN t.Milliseconds > avg(t.Milliseconds) THEN 'over_average'
+              WHEN t.Milliseconds < avg(t.Milliseconds) THEN 'under_average'
+              ELSE 'average_duartion'
+          END AS duration
+   FROM Album a
+   JOIN Track t ON a.AlbumId = t.AlbumId
+   JOIN Genre g ON g.GenreId = t.GenreId
+   GROUP BY 1)
+SELECT count(t1.track_name) AS total_tracks,
+       genre_name,
+       duration
+FROM t1
+WHERE duration = "over_average"
+GROUP BY 2;
+
+
+/* Query 4 - query used for fourth insight */
+SELECT ar.ArtistId,
+       ar.Name AS Artist_name,
+       count(*) AS Rock_Songs
+FROM Artist ar
+JOIN Album al ON ar.ArtistId = al.ArtistId
+JOIN Track t ON al.AlbumId = t.AlbumId
+JOIN Genre g ON t.GenreId = g.GenreId
+WHERE g.Name = "Rock"
+GROUP BY 1,
+         2
+ORDER BY 3 DESC;
